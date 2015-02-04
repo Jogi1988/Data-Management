@@ -1,0 +1,93 @@
+---
+title: "Visualisierung von Punktdaten auf einem Raster"
+author: "Jochen Weiland"
+date: "28.01.2015"
+output: html_document
+---
+
+Dieses Tutorial soll zeigen, wie man eine Funktion erstellt, die automatisch Punkt-Vektordaten auf einem Raster visualisiert. 
+
+***1. Arbeitsplatz einrichten***
+
+Zu Beginn müssen die notwendigen Bibliotheken geladen werden. 
+
+```{r,message=FALSE}
+library(sp)
+library(raster)
+library(rgdal)
+library(RColorBrewer)
+library(latticeExtra)
+
+
+```
+
+***2. Aufbereitung der Daten***
+
+Falls die Raster- und Vektordatensätze bereits (in der richtigen Projektion) vorliegen, kann dieser Schritt übersprungen werden. 
+
+Das Raster wird wie im folgenden Beispiel mit der Funktion "raster" in eine Variable geschrieben. Liegen die Punkte nur als Tabelle vor, wird diese wie gewohnt eingelesen. Durch das Zuweißen von Koordinaten-Spalten wird daraus ein SpatialPointDataFrame. Diesem wird nun die Richtige Projektion zugeweisen und dann in die Projektion des Rasters transformiert.
+
+```{r, message=FALSE}
+setwd("/home/weiland/Documents/Uni_Master/Data_Management/1_RAW_Data/Fogo")
+Fogo <- raster("LC82100502014328LGN00_B3.tif")
+survey<-read.csv("plots_veg_anm_geo_2014.csv")
+coordinates(survey)<-~Lon-Lat
+projection(survey)<-"+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" 
+survey_utm <- spTransform(survey, CRS(projection(Fogo)))
+```
+
+***3. Implementierung der Funktion***
+
+Die eigentliche Funktion wird mit den Variablen "raster" und "vector" durchgeführt. 
+Innerhalb der Funktion wird der Vektor in sechs Klassen unterteilt und anschließend diesen Klassen Farben zugewiesen .
+Anschliesend wir die Ausdehnung des Rasters betrachtet, um später ein Gitternetz zu erstellen. 
+
+Um diese Visualisierung mit zwei Skalen durchzuführen, wird der "Plot" in zwei Plots aufgeteilt. 
+Im ersten Teil wird das Raster mit seiner Legende und der Legende der Punkte geplottet. 
+
+Im zweiten Plot werden die Punktdaten visualisiert. 
+
+Am Ende werden diese beiden Plots zusammen durchgeführt (genauer: der zweite Plot legt sich als neuer Layer auf den ersten)
+
+```{r}
+generate.map <- function (raster, vector){
+  
+  vector_classes <- cut(vector@data$ele, c(seq(min(vector@data$ele,na.rm=T),max(vector@data$ele,na.rm=T),length.out=6)))
+  vector_colors <- colorRampPalette(brewer.pal(6,"Greens"))(6)
+  min <- max(mean(getValues(raster)) - sd(getValues(raster)), 0)
+  max <- mean(getValues(raster)) + sd(getValues(raster))
+  
+  breaks <- seq(min, max, length.out = 256)
+  yat = seq(extent(raster)@ymin, 
+            extent(raster)@ymax, length.out = 5)
+  xat = seq(extent(raster)@xmin, 
+            extent(raster)@xmax, length.out = 5)
+  
+  
+  
+  plt <- spplot(raster, col.regions = gray.colors(256), at = breaks,
+                key = list(space = 'left', text = list(levels(vector_classes)), 
+                           points = list(pch = 21, cex = 2, fill = vector_colors)),
+                colorkey=list(space="right"),
+                panel = function(...){
+                  panel.levelplot(...)
+                  panel.abline(h = yat, v = xat, col = "grey0", lwd = 0.8, lty = 3) 
+                }
+  )
+  
+  orl <- spplot(vector, zcol = "ele", col.regions = vector_colors,
+                cuts=(seq(min(vector@data$ele,na.rm=T),max(vector@data$ele,na.rm=T),length.out=6)))
+  
+  plt + as.layer(orl)
+}
+```
+
+***4. Durchführung***
+
+Wenn man das ganze nun druchführt, erhält man (für dieses Beispiel) folgendes Ergebnis:
+```{r}
+generate.map(Fogo,survey_utm)
+```
+
+
+
