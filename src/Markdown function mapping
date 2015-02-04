@@ -38,9 +38,9 @@ survey_utm <- spTransform(survey, CRS(projection(Fogo)))
 
 ***3. Implementierung der Funktion***
 
-Die eigentliche Funktion wird mit den Variablen "raster" und "vector" durchgeführt. 
+Die eigentliche Funktion wird mit den Variablen "raster" und "vector" und Gridnumber durchgeführt. 
 Innerhalb der Funktion wird der Vektor in sechs Klassen unterteilt und anschließend diesen Klassen Farben zugewiesen .
-Anschliesend wir die Ausdehnung des Rasters betrachtet, um später ein Gitternetz zu erstellen. 
+Anschliesend wir die Ausdehnung des Rasters betrachtet, um später ein Gitternetz zu erstellen. Die Anzahl in der Variable gridnumber (Standard 5) gibt an, wie viele Gitternetztlinien zu sehen sind.
 
 Um diese Visualisierung mit zwei Skalen durchzuführen, wird der "Plot" in zwei Plots aufgeteilt. 
 Im ersten Teil wird das Raster mit seiner Legende und der Legende der Punkte geplottet. 
@@ -50,7 +50,7 @@ Im zweiten Plot werden die Punktdaten visualisiert.
 Am Ende werden diese beiden Plots zusammen durchgeführt (genauer: der zweite Plot legt sich als neuer Layer auf den ersten)
 
 ```{r}
-generate.map <- function (raster, vector){
+generate.map <- function (raster, vector,gridnumber=5){
   
   vector_classes <- cut(vector@data$ele, c(seq(min(vector@data$ele,na.rm=T),max(vector@data$ele,na.rm=T),length.out=6)))
   vector_colors <- colorRampPalette(brewer.pal(6,"Greens"))(6)
@@ -59,9 +59,9 @@ generate.map <- function (raster, vector){
   
   breaks <- seq(min, max, length.out = 256)
   yat = seq(extent(raster)@ymin, 
-            extent(raster)@ymax, length.out = 5)
+            extent(raster)@ymax, length.out = gridnumber)
   xat = seq(extent(raster)@xmin, 
-            extent(raster)@xmax, length.out = 5)
+            extent(raster)@xmax, length.out = gridnumber)
   
   
   
@@ -86,7 +86,7 @@ generate.map <- function (raster, vector){
 
 Wenn man das ganze nun druchführt, erhält man (für dieses Beispiel) folgendes Ergebnis:
 ```{r}
-generate.map(Fogo,survey_utm)
+generate.map(Fogo,survey_utm, 10)
 ```
 
 
